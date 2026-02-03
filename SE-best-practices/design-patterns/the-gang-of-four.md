@@ -98,3 +98,27 @@ Behavioral patterns are concerned with **communication** between objects. They d
 ### Final Thoughts:
 
 The **Gang of Four (GoF)** design patterns are widely regarded as the foundation of **object-oriented design**. They provide a set of time-tested solutions to common design problems that help developers write **more flexible**, **maintainable**, and **efficient** code. While new patterns and variations have emerged since the GoF's original book, the 23 patterns from the Gang of Four remain fundamental in understanding design patterns in software engineering.
+
+
+---
+The following design patterns are some of the most widely used in real-world and production systems:
+
+Singleton (resource management like logging, configuration)
+
+Factory Method (object creation with variation)
+
+Observer (event handling, notifications)
+
+Strategy (dynamic behavior switching)
+
+Decorator (extending functionality without inheritance)
+
+Facade (simplifying complex systems)
+
+Adapter (integrating incompatible interfaces)
+
+Proxy (lazy loading, access control)
+
+Template Method (frameworks with customizable steps)
+
+Chain of Responsibility (request processing, event-driven systems)
