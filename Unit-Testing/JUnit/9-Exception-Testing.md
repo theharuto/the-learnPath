@@ -187,3 +187,137 @@ JUnit 5 makes exception testing:
 or
 
 ### **Layer 7: Writing Custom Exceptions & Testing Them**
+
+<details>
+    <summary>
+        <h1> About Executable </h1>
+    </summary>   
+    
+## What `Executable` means in `assertThrows`
+
+In JUnit 5, **`Executable` is a functional interface**:
+
+```java
+@FunctionalInterface
+public interface Executable {
+    void execute() throws Throwable;
+}
+```
+
+So when you see:
+
+```java
+<T extends Throwable> T assertThrows(
+    Class<T> expectedType,
+    Executable executable
+)
+```
+
+it means:
+
+> “Pass me a **piece of code** that I can **run later**, and I’ll check whether it throws the expected exception.”
+
+That’s it. No magic. No JVM-level “executable” stuff.
+
+---
+
+## Why JUnit needs an `Executable`
+
+JUnit must:
+
+1. **Control when the code runs**
+2. **Catch the exception itself**
+3. **Verify the exception type**
+
+If you just wrote:
+
+```java
+assertThrows(IllegalArgumentException.class, someMethod());
+```
+
+👉 `someMethod()` would execute **before** `assertThrows` gets control — which defeats the whole point.
+
+By passing an `Executable`, you’re giving JUnit a **deferred execution**.
+
+---
+
+## How you usually pass an `Executable`
+
+### Lambda (most common)
+
+```java
+assertThrows(
+    IllegalArgumentException.class,
+    () -> service.doSomething(null)
+);
+```
+
+This lambda is compiled into an `Executable` whose `execute()` method runs `doSomething(null)`.
+
+### Method reference
+
+```java
+assertThrows(
+    IOException.class,
+    this::readFile
+);
+```
+
+As long as the method:
+
+* takes no arguments
+* returns `void`
+* may throw an exception
+
+…it matches `Executable`.
+
+---
+
+## What JUnit does internally (simplified)
+
+```java
+try {
+    executable.execute();
+    fail("Expected exception was not thrown");
+} catch (Throwable actual) {
+    if (!expectedType.isInstance(actual)) {
+        throw actual;
+    }
+    return (T) actual;
+}
+```
+
+That’s why `assertThrows` **returns the exception** — so you can inspect it:
+
+```java
+IllegalArgumentException ex =
+    assertThrows(IllegalArgumentException.class,
+        () -> parse("")
+    );
+
+assertEquals("input is empty", ex.getMessage());
+```
+
+---
+
+## Brutally simple mental model
+
+* **Executable = “code wrapped in a box”**
+* JUnit opens the box **when it’s ready**
+* If the box throws the expected exception → test passes
+
+---
+
+### TL;DR
+
+* `Executable` is a **functional interface**
+* It represents **a block of code to be executed later**
+* Lambdas and method references implement it
+* JUnit uses it to **catch and verify exceptions**
+
+
+* why `Executable` throws `Throwable` instead of `Exception`
+* how this differs from JUnit 4’s `@Test(expected=...)`
+* or how lambdas are used here at the bytecode level
+
+</details>
