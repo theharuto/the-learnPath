@@ -262,3 +262,193 @@ There are three levels of bean selection:
 | Basic             | `@Qualifier`                     |
 | Default override  | `@Primary`                       |
 | Runtime selection | Map injection / Factory / Config |
+
+
+<details>
+    <summary>
+        <h1>The Map of String : beanName and Bean : beanType is automatically created by Spring</h1>
+    </summary>
+
+
+If tomorrow you add:
+
+* ApplePay
+* Crypto
+* BankTransfer
+
+Your controller constructor becomes messy with 5+ dependencies.
+
+Let’s build the **clean, scalable, professional version** using a `Map<String, PaymentService>` 💡
+
+This is the real-world way.
+
+---
+
+# ✅ Step 1 — Define Strategy Interface
+
+```java
+public interface PaymentService {
+    void pay(int amount);
+}
+```
+
+---
+
+# ✅ Step 2 — Give Each Service a Logical Name
+
+Instead of guessing bean names, we’ll let Spring auto-wire them into a Map.
+
+### Option A (Cleanest): Use `@Service("name")`
+
+```java
+@Service("paypal")
+public class PayPalPaymentService implements PaymentService {
+    public void pay(int amount) {
+        System.out.println("Paid with PayPal: " + amount);
+    }
+}
+```
+
+```java
+@Service("creditcard")
+public class CreditCardPaymentService implements PaymentService {
+    public void pay(int amount) {
+        System.out.println("Paid with Credit Card: " + amount);
+    }
+}
+```
+
+Now Spring automatically creates:
+
+```
+Map<String, PaymentService>
+```
+
+Like this internally:
+
+```
+{
+   "paypal" -> PayPalPaymentService
+   "creditcard" -> CreditCardPaymentService
+}
+```
+
+This behavior comes from **Spring Framework**.
+
+---
+
+# ✅ Step 3 — Inject Map in Controller
+
+```java
+@RestController
+@RequestMapping("/api/pay")
+public class PaymentController {
+
+    private final Map<String, PaymentService> paymentServices;
+
+    public PaymentController(Map<String, PaymentService> paymentServices) {
+        this.paymentServices = paymentServices;
+    }
+
+    @GetMapping
+    public ResponseEntity<String> pay(
+            @RequestParam String type,
+            @RequestParam int amount) {
+
+        PaymentService paymentService = paymentServices.get(type.toLowerCase());
+
+        if (paymentService == null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Invalid payment type: " + type);
+        }
+
+        paymentService.pay(amount);
+
+        return ResponseEntity.ok(
+                "Payment successful\nType: " + type + "\nAmount: " + amount);
+    }
+}
+```
+
+---
+
+# ✅ How It Works
+
+Spring sees:
+
+```
+Map<String, PaymentService>
+```
+
+It automatically injects:
+
+* Key → Bean name
+* Value → Bean instance
+
+So your controller becomes dynamic.
+
+---
+
+# 🚀 How To Call It
+
+Now you only need ONE endpoint:
+
+```
+GET http://localhost:8080/api/pay?type=paypal&amount=100
+```
+
+```
+GET http://localhost:8080/api/pay?type=creditcard&amount=200
+```
+
+---
+
+# 🧠 Why This Is Better
+
+| Old Way                                  | Map Way                    |
+| ---------------------------------------- | -------------------------- |
+| 2 fields                                 | 1 field                    |
+| 2 endpoints                              | 1 endpoint                 |
+| Needs constructor change for new service | Just add new service class |
+| Not scalable                             | Fully scalable             |
+| More boilerplate                         | Clean                      |
+
+---
+
+# 🔥 Add New Payment Tomorrow?
+
+Just create:
+
+```java
+@Service("crypto")
+public class CryptoPaymentService implements PaymentService {}
+```
+
+Done.
+
+Controller doesn’t change at all.
+
+---
+
+# 🏆 What Pattern Is This?
+
+This is:
+
+* Strategy Pattern
+* Open/Closed Principle (SOLID)
+* Spring Dynamic Bean Resolution
+
+Very common in production systems.
+
+---
+
+# ⚠️ Even Better (Professional Upgrade)
+
+Instead of using `String type`, use an `enum` for safety.
+
+If you want, I can show you the **enterprise-grade version with enum + validation + exception handler**.
+
+That’s how it’s done in serious backend systems.
+
+</details>
