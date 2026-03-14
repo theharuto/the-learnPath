@@ -1,0 +1,102 @@
+**No — JPQL does NOT automatically return only specific columns based on the projection interface.**  
+Spring Data JPA does the projection mapping **AFTER** the query executes, based on **property getters** in your projection interface.
+
+***
+
+# ✅ **What Projections Actually Mean**
+
+Projection means:
+
+> “Return **only the fields I ask for**, instead of the entire entity.”
+
+But **you must request those fields** — Spring does *not* magically trim columns unless you tell it to.
+
+***
+
+# ✅ **Two Types of Projections**
+
+### **1️⃣ Interface‑Based Projections (your example)**
+
+```java
+public interface UserNameOnly {
+    String getName();
+}
+```
+
+Repository:
+
+```java
+List<UserNameOnly> findByStatus(UserStatus status);
+```
+
+👉 For **simple derived queries**, Spring generates a query selecting **all columns**, but returns only the interface fields because projection *reads only the getters*.  
+Spring Data’s projection mechanism maps **selected fields to interface getters**, not the whole entity. [\[docs.spring.io\]](https://docs.spring.io/spring-data/commons/docs/1.4.0.M1/reference/html/)
+
+*But note:*  
+**Even though the projection exposes only `name`, the SQL may still select the entire row unless you specify a custom JPQL query.**
+
+***
+
+### **2️⃣ JPQL‑Backed Projections (recommended for performance)**
+
+```java
+@Query("SELECT u.name AS name FROM User u WHERE u.status = :status")
+List<UserNameOnly> findByStatus(@Param("status") UserStatus status);
+```
+
+👉 Here JPQL explicitly selects **only `name`**, so only that column is fetched.  
+This is a true projection at the database level.
+
+***
+
+# ❗ Key Clarification (Most Important Part)
+
+### ❌ WRONG assumption
+
+> “JPQL returns exact columns automatically based on the class type.”
+
+### ✔ CORRECT behavior
+
+*   **JPQL returns whatever columns YOU SELECT.**
+*   **If you do `SELECT u`, it loads the full entity.**
+*   **If you do `SELECT u.name`, it loads only that column.**
+
+Spring will then map the results into:
+
+*   Entity (`User`)
+*   Interface projection (`UserNameOnly`)
+*   DTO projection
+*   Record projection
+
+depending on your method return type.  
+Spring Data documentation clearly says JPQL queries operate on entities, but projections map selected fields to interface getters. [\[docs.spring.io\]](https://docs.spring.io/spring-data/commons/docs/1.4.0.M1/reference/html/)
+
+***
+
+# 🧠 Mental Model
+
+**Projection ≠ JPQL auto-selecting columns**  
+Projection = **Spring mapping only the fields defined in your projection interface**
+
+If you want actual DB‑level column trimming, you must write **explicit JPQL projections**:
+
+```java
+SELECT u.name FROM User u
+```
+
+***
+
+# 📌 Final Summary for GitHub Notes
+
+*   JPQL does **not** auto-select only projection columns
+*   To fetch specific columns, write **explicit JPQL SELECT**
+*   Interface projections map getter names → selected columns
+*   Derived queries still select full entity row unless customized
+
+***
+
+If you want, I can show:
+
+*   DTO projections vs interface projections
+*   How Spring Data generates queries under the hood
+*   Performance recommendations when using projections
